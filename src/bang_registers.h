@@ -3,9 +3,21 @@
 
 /*
 	Names by which to access registers.
+
+	Regular registers are in the form
+	0x00**, where they are less than 0x002e.
+
+	Extended register space is accessed
+	from 0x2f, so every extended address
+	starts with 0x2f, ie. in the form 0x2f**,
+	where they are less than or equal to 
+	0x2fff and greater than or equal to
+	0x2f00.
 */
 typedef enum register_name_e {
-	FS_CFG = 0x21
+	FS_CFG       = 0x0021,
+	NUM_TX_BYTES = 0x2fd6,
+	NUM_RX_BYTES = 0x2fd7
 } register_name;
 
 /*
@@ -14,7 +26,7 @@ typedef enum register_name_e {
 	enumeration above, and last is the last.
 */
 #define FIRST_REGISTER_NAME FS_CFG
-#define LAST_REGISTER_NAME FS_CFG
+#define LAST_REGISTER_NAME NUM_RX_BYTES
 
 /*
 	Writes an 8-bit value to the specified register, and
