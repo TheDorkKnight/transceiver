@@ -3,6 +3,8 @@ transceiver
 
 A transceiver driver for the TI cc1120.
 
+- NOTE: This is not yet a functional project!
+
 Specifically, for use by the UBC Orbit team in a cube-sat
 radio communications project.
 
