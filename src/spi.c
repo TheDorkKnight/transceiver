@@ -9,13 +9,27 @@
 #define SPI_write_to_SCLK(A) (GPIO_write_SCLK(A))
 #define SPI_write_to_CSn(A) (GPIO_write_SS(A))
 
+#define SPI_NUM_DELAY_CYCLES 10
+
+static void s_SPI_delay(int multiplier) {
+	int i;
+	int delay = multiplier * SPI_NUM_DELAY_CYCLES;
+	if (delay <= 0) {
+		delay = 50;
+	}
+	for (i = 0; i < delay; i++) {
+		// do nothing
+	}
+}
 
 void SPI_start_transaction(void) {
 	SPI_write_to_CSn(LOW);
+	s_SPI_delay(1);
 }
 
 void SPI_stop_transaction(void) {
 	SPI_write_to_CSn(HIGH);
+	s_SPI_delay(1);
 }
 
 /*
@@ -38,6 +52,7 @@ uint8_t SPI_transfer_byte(uint8_t byte_out) {
 
 		/* Delay for at least the peer's setup time */
 		// !!! Find out how long
+		s_SPI_delay(1);
 
 		/* Pull the clock line high */
 		SPI_write_to_SCLK(HIGH);
@@ -50,10 +65,13 @@ uint8_t SPI_transfer_byte(uint8_t byte_out) {
 
 		/* Delay for at least the peer's hold time */
 		// !!! Find out how long
+		s_SPI_delay(1);
 
 		/* Pull the clock line low */
 		SPI_write_to_SCLK(LOW);
 	}
+
+	s_SPI_delay(1);
 
 	return byte_in;
 }
