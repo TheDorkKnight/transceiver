@@ -1,6 +1,11 @@
 #ifndef _BANG_REGISTERS_H_
 #define _BANG_REGISTERS_H_
 
+#define STANDARD_REGISTER_SPACE 0x2e
+#define EXTENDED_REGISTER_SPACE 0xff
+
+#define EXTENDED_REGISTER_SPACE_ADDRESS 0x2f
+
 /*
 	Names by which to access registers.
 
@@ -14,11 +19,11 @@
 	0x2fff and greater than or equal to
 	0x2f00.
 */
-typedef enum register_name_e {
-	FS_CFG       = 0x0021,
-	NUM_TX_BYTES = 0x2fd6,
-	NUM_RX_BYTES = 0x2fd7
-} register_name;
+typedef uint16_t register_name;
+
+#define FS_CFG       (register_name)0x0021
+#define NUM_TX_BYTES (register_name)0x2fd6
+#define NUM_RX_BYTES (register_name)0x2fd7
 
 /*
 	Bounds checking constants for valid registers.
@@ -26,7 +31,7 @@ typedef enum register_name_e {
 	enumeration above, and last is the last.
 */
 #define FIRST_REGISTER_NAME FS_CFG
-#define LAST_REGISTER_NAME NUM_RX_BYTES
+#define LAST_REGISTER_NAME  NUM_RX_BYTES
 
 /*
 	Writes an 8-bit value to the specified register, and

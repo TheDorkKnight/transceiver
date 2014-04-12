@@ -2,138 +2,17 @@
 #include "spi.h"
 #include "bang_registers.h"
 
-#define EXTENDED_REGISTER_SPACE 0x2f
-
-static int s_REGISTER_extended_space_write(register_name rn, uint8_t data, uint8_t* status) {
-	/*
-		In the extended register space, we must first send a command
-		to address 0x3f, and then we can access the register.
-	*/
-	uint8_t byt = (SPI_WRITE | SPI_SINGLE) | EXTENDED_REGISTER_SPACE; // extended command
-
-	SPI_start_transaction();
-
-	// Signal write to extended register space
-	SPI_transfer_byte(byt);
-
-	// Write address of register within extended space
-	byt = rn & 0x00ff;
-	SPI_transfer_byte(byt);
-
-	// Write data to register
-	byt = SPI_transfer_byte(data);
-	if (status) {
-		*status = byt;
-	}
-
-	SPI_stop_transaction();
-	return 1;
+static int s_REGISTER_address_is_in_extended_space(register_name rn) {
+	return (((rn & (EXTENDED_REGISTER_SPACE << 2)) >> 2) == EXTENDED_REGISTER_SPACE_ADDRESS);
 }
 
-static int s_REGISTER_extended_space_read(register_name rn, uint8_t* data, uint8_t* status) {
-	/*
-		In the extended register space, we must first send a command
-		to address 0x3f, and then we can access the register.
-	*/
-	uint8_t byt = (SPI_READ | SPI_SINGLE) | EXTENDED_REGISTER_SPACE; // extended command
-
-	SPI_start_transaction();
-
-	// Signal read from extended register space
-	byt = SPI_transfer_byte(byt);
-	if (status) {
-		*status = byt;
-	}
-
-	// Write address of register within extended space
-	byt = rn & 0x00ff;
-	SPI_transfer_byte(byt);
-
-	// Read data from register
-	byt = SPI_transfer_byte(0);
-	if (data) {
-		*data = byt;
-	}
-
-	SPI_stop_transaction();
-	return 1;
-}
-
-static int s_REGISTER_extended_space_burst_write(register_name rn, uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
-	/*
-		In the extended register space, we must first send a command
-		to address 0x3f, and then we can access the register.
-	*/
-	uint8_t byt = (SPI_WRITE | SPI_BURST) | EXTENDED_REGISTER_SPACE; // extended command
-	uint8_t i;
-	if (data_len <= 1) {
-		return 0;
-	}
-	if (!data_arr) {
-		return 0;
-	}
-
-	SPI_start_transaction();
-
-	// Signal write to extended register space
-	byt = SPI_transfer_byte(byt);
-	if (status) {
-		*status = byt;
-	}
-
-	// Write address of register within extended space
-	byt = rn & 0x00ff;
-	SPI_transfer_byte(byt);
-
-	for (i = 0; i < data_len; i++) {
-		SPI_transfer_byte(data_arr[i]);
-	}		
-
-	SPI_stop_transaction();
-	return 1;
-}
-
-static int s_REGISTER_extended_space_burst_read(register_name rn, uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
-	/*
-		In the extended register space, we must first send a command
-		to address 0x3f, and then we can access the register.
-	*/
-	uint8_t byt = (SPI_READ | SPI_BURST) | EXTENDED_REGISTER_SPACE; // extended command
-	uint8_t i;
-	if (data_len <= 1) {
-		return 0;
-	}
-
-	SPI_start_transaction();
-
-	// Signal read from extended register space
-	byt = SPI_transfer_byte(byt);
-	if (status) {
-		*status = byt;
-	}
-
-	// Write address of register within extended space
-	byt = rn & 0x00ff;
-	SPI_transfer_byte(byt);
-
-	// Read data from registers
-	if (data_arr) {
-		for (i = 0; i < data_len; i++) {
-			data_arr[i] = SPI_transfer_byte(0);
-		}
+static uint8_t s_REGISTER_extract_address(register_name rn) {
+	if (s_REGISTER_address_is_in_extended_space(rn)) {
+		return (uint8_t)(rn & EXTENDED_REGISTER_SPACE);
 	}
 	else {
-		for (i = 0; i < data_len; i++) {
-			SPI_transfer_byte(0);
-		}		
+		return (uint8_t)(rn & STANDARD_REGISTER_SPACE);	
 	}
-
-	SPI_stop_transaction();
-	return 1;
-}
-
-static int s_REGISTER_address_is_in_extended_space(register_name rn) {
-	return (((rn & (EXTENDED_REGISTER_SPACE << 2)) >> 2) == EXTENDED_REGISTER_SPACE);
 }
 
 // Publicly Exported Functions
@@ -144,27 +23,22 @@ int REGISTER_write(register_name rn, uint8_t data, uint8_t* status) {
 	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
 		return 0;
 	}
-	if (s_REGISTER_address_is_in_extended_space(rn)) {
-		return s_REGISTER_extended_space_write(rn, data, status);
-	}
-
-	// 7th bit is write bit
-	byt |= SPI_WRITE;
-
-	// second bit is single-access bit
-	byt |= SPI_SINGLE;
-
-	// last six bits are address
-	byt |= (rn & 0x3f);
 
 	SPI_start_transaction();
 
-	// Write the address byte over SPI
+	// Signal extended space address if necessary
+	if (s_REGISTER_address_is_in_extended_space(rn)) {
+		byt = (SPI_WRITE | SPI_SINGLE) | EXTENDED_REGISTER_SPACE_ADDRESS;
+		SPI_transfer_byte(byt);
+	}
+
+	// OR together single-write command and register address
+	byt = (SPI_WRITE | SPI_SINGLE) | s_REGISTER_extract_address(rn);
 	SPI_transfer_byte(byt);
 
 	// Write output byte to the register over SPI
 	byt = SPI_transfer_byte(data);
-	if (status) {
+	if (status) { // output chip status byte
 		*status = byt;
 	}
 
@@ -177,24 +51,17 @@ int REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
 	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
 		return 0;
 	}
-	if (s_REGISTER_address_is_in_extended_space(rn)) {
-		return s_REGISTER_extended_space_read(rn, data, status);
-	}
-
-	// 7th bit is read-write bit, set to read
-	byt |= SPI_READ;
-
-	// second bit is single-access bit
-	byt |= SPI_SINGLE;
-
-	// last six bits are address
-	byt |= (rn & 0x3f);
 
 	SPI_start_transaction();
 
-	// Write the address byte over SPI
-	byt = SPI_transfer_byte(byt);
-	if (status) {
+	if (s_REGISTER_address_is_in_extended_space(rn)) {
+		byt = (SPI_READ | SPI_SINGLE) | EXTENDED_REGISTER_SPACE_ADDRESS;
+		SPI_transfer_byte(byt);
+	}
+
+	// transfer register address
+	byt = (SPI_READ | SPI_SINGLE) | s_REGISTER_extract_address(rn);
+	if (status) { // output chip status
 		*status = byt;
 	}
 
@@ -220,19 +87,17 @@ int REGISTER_burst_write(register_name rn, uint8_t* data_arr, uint8_t data_len, 
 	if (data_len <= 1) {
 		return 0;
 	}
+
+	SPI_start_transaction();
+
+	// Signal if address is extended address if necessary
 	if (s_REGISTER_address_is_in_extended_space(rn)) {
-		return s_REGISTER_extended_space_burst_write(rn, data_arr, data_len, status);
+		byt = (SPI_WRITE | SPI_BURST) | EXTENDED_REGISTER_SPACE_ADDRESS;
+		SPI_transfer_byte(byt);
 	}
 
-	// 7th bit is write bit
-	byt |= SPI_WRITE;
-
-	// second bit is burst-access bit
-	byt |= SPI_BURST;
-
-	// last six bits are address
-	byt |= (rn & 0x3f);
-
+	// Signal register address
+	byt = (SPI_WRITE | SPI_BURST) | s_REGISTER_extract_address(rn);
 	SPI_start_transaction();
 
 	// Write the address byte over SPI
@@ -242,7 +107,6 @@ int REGISTER_burst_write(register_name rn, uint8_t* data_arr, uint8_t data_len, 
 	for (i = 0; i < data_len; i++) {
 		byt = SPI_transfer_byte(data_arr[i]);		
 	}
-
 	if (status) {
 		*status = byt;
 	}
@@ -263,31 +127,25 @@ int REGISTER_burst_read(register_name rn, uint8_t* data_arr, uint8_t data_len, u
 	if (data_len <= 1) {
 		return 0;
 	}
-	if (s_REGISTER_address_is_in_extended_space(rn)) {
-		return s_REGISTER_extended_space_burst_read(rn, data_arr, data_len, status);
-	}
-
-	// 7th bit is read bit
-	byt |= SPI_READ;
-
-	// second bit is burst-access bit
-	byt |= SPI_BURST;
-
-	// last six bits are address
-	byt |= (rn & 0x3f);
 
 	SPI_start_transaction();
 
-	// Write the address byte over SPI
-	byt = SPI_transfer_byte(byt);
-
-	// Read bytes over SPI
-	for (i = 0; i < data_len; i++) {
-		data_arr[i] = SPI_transfer_byte(0);		
+	// Signal that registers are in extended space, if necessary
+	if (s_REGISTER_address_is_in_extended_space(rn)) {
+		byt = (SPI_READ | SPI_BURST) | EXTENDED_REGISTER_SPACE_ADDRESS;
+		SPI_transfer_byte(byt);
 	}
 
-	if (status) {
+	// Signal starting register address
+	byt = (SPI_READ | SPI_BURST) | s_REGISTER_extract_address(rn);
+	byt = SPI_transfer_byte(byt);
+	if (status) { // output chip status byte
 		*status = byt;
+	}
+
+	// Read bytes into array
+	for (i = 0; i < data_len; i++) {
+		data_arr[i] = SPI_transfer_byte(0);		
 	}
 
 	SPI_stop_transaction();
