@@ -10,6 +10,9 @@
 */
 #define TRANSCEIVER_FIFO_SIZE 128
 
+#define DIRECT_FIFO_ADDRESS 0x3e
+#define STANDARD_FIFO_ADDRESS 0x3f
+
 /*
 	Outputs number of bytes in RX FIFO and reads chip
 	status.
