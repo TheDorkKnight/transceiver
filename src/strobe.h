@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define STROBE_ADDRESS_START 0x30
+#define STROBE_ADDRESS_END   0x3d
+
 typedef enum strobe_name_e {
 	SRES    = 0x30, // Reset Chip
 	SFSTXON = 0x31, // Enable and calibrate frequency synthesizer
