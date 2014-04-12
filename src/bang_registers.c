@@ -2,16 +2,22 @@
 #include "spi.h"
 #include "bang_registers.h"
 
+#define _DEBUG_BANG_REGISTERS_
+
+#ifdef _DEBUG_BANG_REGISTERS_
+#include <stdio.h>
+#endif
+
 static int s_REGISTER_address_is_in_extended_space(register_name rn) {
 	return (((rn & (EXTENDED_REGISTER_SPACE << 2)) >> 2) == EXTENDED_REGISTER_SPACE_ADDRESS);
 }
 
 static uint8_t s_REGISTER_extract_address(register_name rn) {
 	if (s_REGISTER_address_is_in_extended_space(rn)) {
-		return (uint8_t)(rn & EXTENDED_REGISTER_SPACE);
+		return (uint8_t)(rn & 0xff);
 	}
 	else {
-		return (uint8_t)(rn & STANDARD_REGISTER_SPACE);	
+		return (uint8_t)(rn & 0x2f);	
 	}
 }
 
@@ -24,7 +30,15 @@ int REGISTER_write(register_name rn, uint8_t data, uint8_t* status) {
 		return 0;
 	}
 
+#ifdef _DEBUG_BANG_REGISTERS_
+	printf("Beginning REGISTER_write to rn: %x, with data: %x...\n", rn, data);
+#endif
+
 	SPI_start_transaction();
+
+#ifdef _DEBUG_BANG_REGISTERS_
+	printf("\t\tStarted SPI transaction\n");
+#endif
 
 	// Signal extended space address if necessary
 	if (s_REGISTER_address_is_in_extended_space(rn)) {
@@ -43,6 +57,9 @@ int REGISTER_write(register_name rn, uint8_t data, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
+#ifdef _DEBUG_BANG_REGISTERS_
+	printf("\t\tStopped SPI transaction\n");
+#endif
 	return 1;
 }
 
@@ -52,7 +69,15 @@ int REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
 		return 0;
 	}
 
+#ifdef _DEBUG_BANG_REGISTERS_
+	printf("Beginning REGISTER_read from rn: %x...\n", rn);
+#endif
+
 	SPI_start_transaction();
+
+#ifdef _DEBUG_BANG_REGISTERS_
+	printf("\t\tStarted SPI transaction\n");
+#endif
 
 	if (s_REGISTER_address_is_in_extended_space(rn)) {
 		byt = (SPI_READ | SPI_SINGLE) | EXTENDED_REGISTER_SPACE_ADDRESS;
@@ -61,6 +86,7 @@ int REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
 
 	// transfer register address
 	byt = (SPI_READ | SPI_SINGLE) | s_REGISTER_extract_address(rn);
+	byt = SPI_transfer_byte(byt);
 	if (status) { // output chip status
 		*status = byt;
 	}
@@ -72,6 +98,10 @@ int REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
+
+#ifdef _DEBUG_BANG_REGISTERS_
+	printf("\t\tStopped SPI transaction\n");
+#endif
 	return 1;
 }
 
