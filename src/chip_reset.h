@@ -2,6 +2,7 @@
 #define _CHIP_RESET_H_
 
 #include <stdint.h>
+#include "error.h"
 
 /*
 	The chip can be reset by:
@@ -16,7 +17,7 @@
 	chip status.
 	Returns 1 if successful, 0 otherwise.
 */
-int RESET_strobe_reset(uint8_t* status);
+tcvr_error_t RESET_strobe_reset(uint8_t* status);
 
 #endif
 

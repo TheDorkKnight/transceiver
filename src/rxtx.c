@@ -1,4 +1,5 @@
 
+#include "error.h"
 #include "spi.h"
 #include "bang_registers.h"
 #include "rxtx.h"
@@ -9,23 +10,26 @@
 #define STANDARD_FIFO_ADDRESS 0x3f
 #define DIRECT_FIFO_ADDRESS 0x3e
 
-int RX_queue_len(uint8_t* len, uint8_t* status) {
+tcvr_error_t RX_queue_len(uint8_t* len, uint8_t* status) {
 	return REGISTER_read(NUM_RX_BYTES, len, status);
 }
 
-int TX_queue_len(uint8_t* len, uint8_t* status) {
+tcvr_error_t TX_queue_len(uint8_t* len, uint8_t* status) {
 	return REGISTER_read(NUM_TX_BYTES, len, status);
 }
 
-int RX_dequeue(uint8_t* data, uint8_t* status) {
-	uint8_t addr = 0;
-	uint8_t byt;
-	uint8_t success;
+tcvr_error_t RX_dequeue(uint8_t* data, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      addr = 0;
+	uint8_t      byt;
 
 	// Check if the RX FIFO is empty
-	success = RX_queue_len(&byt, status);
-	if (!success || byt == 0) {
-		return 0;
+	err = RX_queue_len(&byt, status);
+	if (err != ERROR_NONE) {
+		return err;
+	}
+	if (byt == 0) {
+		return ERROR_RXTX_DEQUEUING_FROM_EMPTY_RX_FIFO;
 	}
 
 	// RX FIFO Address
@@ -46,18 +50,21 @@ int RX_dequeue(uint8_t* data, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }
 
-int TX_enqueue(uint8_t data, uint8_t* status) {
-	uint8_t addr = 0;
-	uint8_t byt;
-	uint8_t success;
+tcvr_error_t TX_enqueue(uint8_t data, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      addr = 0;
+	uint8_t      byt;
 
 	// Check if the TX FIFO is full
-	success = TX_queue_len(&byt, status);
-	if (!success || byt == TRANSCEIVER_FIFO_SIZE) {
-		return 0;
+	err = TX_queue_len(&byt, status);
+	if (err != ERROR_NONE) {
+		return err;
+	}
+	if (byt == TRANSCEIVER_FIFO_SIZE) {
+		return ERROR_RXTX_ENQUEUING_TO_FULL_TX_FIFO;
 	}
 
 	// TX FIFO Address
@@ -75,21 +82,22 @@ int TX_enqueue(uint8_t data, uint8_t* status) {
 	SPI_transfer_byte(data);
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }
 
-int RX_burst_dequeue(uint8_t* data_arr, uint8_t bytes_requested,
-                     uint8_t* bytes_received, uint8_t* status) {
-	uint8_t addr = 0;
-	uint8_t rx_fifo_len;
-	uint8_t i;
-	uint8_t success;
+tcvr_error_t RX_burst_dequeue(uint8_t* data_arr, uint8_t bytes_requested,
+                              uint8_t* bytes_received, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      addr = 0;
+	uint8_t      rx_fifo_len;
+	uint8_t      i;
 
 	// Check RX FIFO num items enqueued
-	success = RX_queue_len(&rx_fifo_len, status);
-	if (!success) {
-		return 0;
+	err = RX_queue_len(&rx_fifo_len, status);
+	if (err != ERROR_NONE) {
+		return err;
 	}
+	// Limit bytes_requested to amount actually in queue
 	bytes_requested = (rx_fifo_len < bytes_requested) ? rx_fifo_len : bytes_requested;
 
 	// RX FIFO Address
@@ -116,26 +124,26 @@ int RX_burst_dequeue(uint8_t* data_arr, uint8_t bytes_requested,
 	}
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }
 
-int TX_burst_enqueue(uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
-	uint8_t addr = 0;
-	uint8_t tx_fifo_len;
-	uint8_t i;
-	uint8_t success;
+tcvr_error_t TX_burst_enqueue(uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      addr = 0;
+	uint8_t      tx_fifo_len;
+	uint8_t      i;
 
 	if (!data_arr) {
 		return 0;
 	}
 
-	// Check RX FIFO num items enqueued
-	success = RX_queue_len(&tx_fifo_len, status);
-	if (!success) {
-		return 0;
+	// Check TX FIFO num items enqueued
+	err = TX_queue_len(&tx_fifo_len, status);
+	if (err != ERROR_NONE) {
+		return err;
 	}
 	if (tx_fifo_len + data_len > TRANSCEIVER_FIFO_SIZE) {
-		return 0;
+		return ERROR_RXTX_ENQUEUING_TO_FULL_TX_FIFO;
 	}
 
 	// TX FIFO Address
@@ -155,6 +163,6 @@ int TX_burst_enqueue(uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }
 

@@ -1,6 +1,7 @@
 
 #include <stdint.h>
 
+#include "error.h"
 #include "bits.h"
 #include "bang_registers.h"
 //#include "xosc.h"
@@ -29,47 +30,47 @@ static uint32_t s_FREQCONFIG_rf(uint32_t freq, uint16_t freq_off, XOSC_frequency
 }
 */
 
-int FREQCONFIG_read_band(freq_band* fb, uint8_t* status) {
-	uint8_t data;
-	int     success;
+tcvr_error_t FREQCONFIG_read_band(freq_band* fb, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      data;
 
 	// read bitfield
-	success = REGISTER_read_bitfield(FS_CFG, FREQCONFIG_BAND_MS_BIT, FREQCONFIG_BAND_LS_BIT, &data, status);
-	if (!success) {
-		return 0;
+	err = REGISTER_read_bitfield(FS_CFG, FREQCONFIG_BAND_MS_BIT, FREQCONFIG_BAND_LS_BIT, &data, status);
+	if (err != ERROR_NONE) {
+		return err;
 	}
 
 	// output bitfield data as frequency band
 	if (fb) {
 		*fb = (freq_band)data;
 	}
-	return 1;
+	return ERROR_NONE;
 }
 
-int FREQCONFIG_read_out_of_lock_detector_enabled(int* enabled, uint8_t* status) {
-	uint8_t data;
-	int     success;
+tcvr_error_t FREQCONFIG_read_out_of_lock_detector_enabled(int* enabled, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      data;
 
 	// read bitfield
-	success = REGISTER_read_bitfield(FS_CFG, FREQCONFIG_LOCK_ENABLED_MS_BIT, FREQCONFIG_LOCK_ENABLED_LS_BIT, &data, status);
-	if (!success) {
-		return 0;
+	err = REGISTER_read_bitfield(FS_CFG, FREQCONFIG_LOCK_ENABLED_MS_BIT, FREQCONFIG_LOCK_ENABLED_LS_BIT, &data, status);
+	if (err != ERROR_NONE) {
+		return err;
 	}
 
 	// output bitfield data as frequency band
 	if (enabled) {
 		*enabled = (int)data;
 	}
-	return 1;
+	return ERROR_NONE;
 }
 
-int FREQCONFIG_set_band(freq_band fb, uint8_t* status) {
+tcvr_error_t FREQCONFIG_set_band(freq_band fb, uint8_t* status) {
 	uint8_t data = (uint8_t)fb;
 
 	return REGISTER_write_bitfield(FS_CFG, data, FREQCONFIG_BAND_MS_BIT, FREQCONFIG_BAND_LS_BIT, status);
 }
 
-int FREQCONFIG_set_out_of_lock_detector_enabled(int enable, uint8_t* status) {
+tcvr_error_t FREQCONFIG_set_out_of_lock_detector_enabled(int enable, uint8_t* status) {
 	uint8_t data = (enable) ? 1 : 0;
 
 	return REGISTER_write_bitfield(FS_CFG, data, FREQCONFIG_LOCK_ENABLED_MS_BIT, FREQCONFIG_LOCK_ENABLED_LS_BIT, status);

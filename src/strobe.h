@@ -2,6 +2,7 @@
 #define _STROBE_H_
 
 #include <stdint.h>
+#include "error.h"
 
 #define STROBE_ADDRESS_START 0x30
 #define STROBE_ADDRESS_END   0x3d
@@ -23,6 +24,6 @@ typedef enum strobe_name_e {
 	SNOP    = 0x3d  // No operation. May be used to get access to the chip status byte.
 } strobe_name;
 
-int STROBE_command_strobe(strobe_name sn, uint8_t* status);
+tcvr_error_t STROBE_command_strobe(strobe_name sn, uint8_t* status);
 
 #endif

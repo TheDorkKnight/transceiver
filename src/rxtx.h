@@ -2,6 +2,7 @@
 #define _TRANSCEIVER_RX_TX_H_
 
 #include <stdint.h>
+#include "error.h"
 
 /*
 	There are two FIFOs on the transceiver chip,
@@ -18,14 +19,14 @@
 	status.
 	Returns 1 if successful, 0 otherwise.
 */
-int RX_queue_len(uint8_t* len, uint8_t* status);
+tcvr_error_t RX_queue_len(uint8_t* len, uint8_t* status);
 
 /*
 	Outputs number of bytes in TX FIFO and reads chip
 	status.
 	Returns 1 if successful, 0 otherwise.
 */
-int TX_queue_len(uint8_t* len, uint8_t* status);
+tcvr_error_t TX_queue_len(uint8_t* len, uint8_t* status);
 
 /*
 	Dequeues a single byte from the RX FIFO and reads
@@ -33,14 +34,14 @@ int TX_queue_len(uint8_t* len, uint8_t* status);
 	Returns 1 if byte is dequeued, returns 0 if
 	no byte existed.
 */
-int RX_dequeue(uint8_t* data, uint8_t* status);
+tcvr_error_t RX_dequeue(uint8_t* data, uint8_t* status);
 /*
 	Enqueues a single byte into the TX FIFO and reads
 	chip status.
 	Returns 1 if byte is enqueued, returns 0 if
 	FIFO is full.
 */
-int TX_enqueue(uint8_t data, uint8_t* status);
+tcvr_error_t TX_enqueue(uint8_t data, uint8_t* status);
 
 /*
 	Dequeues a series of contiguous bytes from the RX FIFO, and
@@ -51,7 +52,7 @@ int TX_enqueue(uint8_t data, uint8_t* status);
 
 	Errors:   bytes_received must be non-null
 */
-int RX_burst_dequeue(uint8_t* data_arr, uint8_t bytes_requested, uint8_t* bytes_received, uint8_t* status);
+tcvr_error_t RX_burst_dequeue(uint8_t* data_arr, uint8_t bytes_requested, uint8_t* bytes_received, uint8_t* status);
 /*
 	Enqueues a series of contiguous bytes into the TX FIFO, and
 	reads chip status.
@@ -61,6 +62,6 @@ int RX_burst_dequeue(uint8_t* data_arr, uint8_t bytes_requested, uint8_t* bytes_
 	
 	Errors:   data_len must be <= TRANSCEIVER_FIFO_SIZE - current TX queue length.
 */
-int TX_burst_enqueue(uint8_t* data_arr, uint8_t data_len, uint8_t* status);
+tcvr_error_t TX_burst_enqueue(uint8_t* data_arr, uint8_t data_len, uint8_t* status);
 
 #endif

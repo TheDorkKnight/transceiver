@@ -24,21 +24,18 @@ static uint8_t s_REGISTER_extract_address(register_name rn) {
 // Publicly Exported Functions
 // ===========================
 
-int REGISTER_write(register_name rn, uint8_t data, uint8_t* status) {
+tcvr_error_t REGISTER_write(register_name rn, uint8_t data, uint8_t* status) {
 	uint8_t byt = 0;
-	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
-		return 0;
-	}
 
 #ifdef _DEBUG_BANG_REGISTERS_
 	printf("Beginning REGISTER_write to rn: %x, with data: %x...\n", rn, data);
 #endif
 
-	SPI_start_transaction();
+	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
+		return ERROR_REGISTER_INVALID_NAME;
+	}
 
-#ifdef _DEBUG_BANG_REGISTERS_
-	printf("\t\tStarted SPI transaction\n");
-#endif
+	SPI_start_transaction();
 
 	// Signal extended space address if necessary
 	if (s_REGISTER_address_is_in_extended_space(rn)) {
@@ -57,27 +54,21 @@ int REGISTER_write(register_name rn, uint8_t data, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
-#ifdef _DEBUG_BANG_REGISTERS_
-	printf("\t\tStopped SPI transaction\n");
-#endif
-	return 1;
+	return ERROR_NONE;
 }
 
-int REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
+tcvr_error_t REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
 	uint8_t byt = 0;
-	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
-		return 0;
-	}
 
 #ifdef _DEBUG_BANG_REGISTERS_
 	printf("Beginning REGISTER_read from rn: %x...\n", rn);
 #endif
 
-	SPI_start_transaction();
+	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
+		return ERROR_REGISTER_INVALID_NAME;
+	}
 
-#ifdef _DEBUG_BANG_REGISTERS_
-	printf("\t\tStarted SPI transaction\n");
-#endif
+	SPI_start_transaction();
 
 	if (s_REGISTER_address_is_in_extended_space(rn)) {
 		byt = (SPI_READ | SPI_SINGLE) | EXTENDED_REGISTER_SPACE_ADDRESS;
@@ -98,24 +89,20 @@ int REGISTER_read(register_name rn, uint8_t* data, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
-
-#ifdef _DEBUG_BANG_REGISTERS_
-	printf("\t\tStopped SPI transaction\n");
-#endif
-	return 1;
+	return ERROR_NONE;
 }
 
-int REGISTER_burst_write(register_name rn, uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
+tcvr_error_t REGISTER_burst_write(register_name rn, uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
 	uint8_t byt = 0;
 	uint8_t i;
 	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
-		return 0;
+		return ERROR_REGISTER_INVALID_NAME;
 	}
 	if (!data_arr) {
-		return 0;
+		return ERROR_NULL_POINTER;
 	}
 	if (data_len <= 1) {
-		return 0;
+		return ERROR_PARAMETER_OUT_OF_RANGE;
 	}
 
 	SPI_start_transaction();
@@ -142,20 +129,20 @@ int REGISTER_burst_write(register_name rn, uint8_t* data_arr, uint8_t data_len, 
 	}
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }
 
-int REGISTER_burst_read(register_name rn, uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
+tcvr_error_t REGISTER_burst_read(register_name rn, uint8_t* data_arr, uint8_t data_len, uint8_t* status) {
 	uint8_t byt = 0;
 	uint8_t i;
 	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
-		return 0;
+		return ERROR_REGISTER_INVALID_NAME;
 	}
 	if (!data_arr) {
-		return 0;
+		return ERROR_NULL_POINTER;
 	}
 	if (data_len <= 1) {
-		return 0;
+		return ERROR_PARAMETER_OUT_OF_RANGE;
 	}
 
 	SPI_start_transaction();
@@ -179,23 +166,25 @@ int REGISTER_burst_read(register_name rn, uint8_t* data_arr, uint8_t data_len, u
 	}
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }
 
-int REGISTER_write_bitfield(register_name rn, uint8_t data,
-                             bit_t ms_bit, bit_t ls_bit,
-                             uint8_t* status) {
-	bit_t bit = 0;
-	uint8_t old_data = 0;
-	uint8_t mask = 0;
+tcvr_error_t REGISTER_write_bitfield(register_name rn, uint8_t data,
+                                     bit_t ms_bit, bit_t ls_bit,
+                                     uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	bit_t        bit = 0;
+	uint8_t      old_data = 0;
+	uint8_t      mask = 0;
 
 	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
-		return 0;
+		return ERROR_REGISTER_INVALID_NAME;
 	}
 
 	// read the old data
-	if (REGISTER_read(rn, &old_data, status) == 0) {
-		return 0;
+	err = REGISTER_read(rn, &old_data, status);
+	if (err != ERROR_NONE) {
+		return err;
 	}
 
 	// make sure bits are in appropriate significance order
@@ -231,18 +220,20 @@ int REGISTER_write_bitfield(register_name rn, uint8_t data,
 	return REGISTER_write(rn, data, status);
 }
 
-int REGISTER_read_bitfield(register_name rn, bit_t ms_bit, bit_t ls_bit,
-                           uint8_t* data, uint8_t* status) {
-	bit_t bit = 0;
-	uint8_t mask = 0;
+tcvr_error_t REGISTER_read_bitfield(register_name rn, bit_t ms_bit, bit_t ls_bit,
+                                    uint8_t* data, uint8_t* status) {
+	tcvr_error_t err = ERROR_NONE;
+	bit_t        bit = 0;
+	uint8_t      mask = 0;
 
 	if (rn < FIRST_REGISTER_NAME || rn > LAST_REGISTER_NAME) {
-		return 0;
+		return ERROR_REGISTER_INVALID_NAME;
 	}
 
 	// read the data
-	if (REGISTER_read(rn, data, status) == 0) {
-		return 0;
+	err = REGISTER_read(rn, data, status);
+	if (err != ERROR_NONE) {
+		return err;
 	}
 
 	// make sure bits are in appropriate significance order
@@ -265,5 +256,5 @@ int REGISTER_read_bitfield(register_name rn, bit_t ms_bit, bit_t ls_bit,
 		bit >>=1;
 	}
 
-	return 1;
+	return ERROR_NONE;
 }

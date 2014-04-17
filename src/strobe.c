@@ -1,6 +1,7 @@
 
 #include <stdint.h>
 
+#include "error.h"
 #include "gpio.h"
 #include "spi.h"
 #include "strobe.h"
@@ -13,15 +14,11 @@ static void s_delay() {
 	// nothing
 }
 
-int STROBE_command_strobe(strobe_name sn, uint8_t* status) {
+tcvr_error_t STROBE_command_strobe(strobe_name sn, uint8_t* status) {
 	uint8_t byt = 0;
 
 	if (sn < SRES || sn > SNOP) {
-		return 0;
-	}
-
-	if (sn == SRES) {
-		// SRES is handled in a special way
+		return ERROR_STROBE_INVALID_NAME;
 	}
 
 	// Set Read/Write bit to write
@@ -42,6 +39,7 @@ int STROBE_command_strobe(strobe_name sn, uint8_t* status) {
 	}
 
 	if (sn == SRES) {
+		// SRES is handled in a special way:
 		// we must wait until SO goes low before releasing
 		// CSn to high, ie. stopping transaction
 		while (GPIO_read_MISO() == HIGH) {
@@ -51,5 +49,5 @@ int STROBE_command_strobe(strobe_name sn, uint8_t* status) {
 	}
 
 	SPI_stop_transaction();
-	return 1;
+	return ERROR_NONE;
 }

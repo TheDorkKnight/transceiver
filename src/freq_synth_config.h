@@ -2,6 +2,7 @@
 #define _FREQUENCY_SYTHESIZER_CONFIGURATION_H_
 
 #include <stdint.h>
+#include "error.h"
 
 /*
 	Frequency band in MHz
@@ -17,26 +18,26 @@ typedef enum freq_band_e {
 
 /*
 	Reads current frequency band and chip status.
-	Returns 1 if successful, 0 otherwise.
+	Returns ERROR_NONE if successful.
 */
-int FREQCONFIG_read_band(freq_band *fb, uint8_t* status);
+tcvr_error_t FREQCONFIG_read_band(freq_band *fb, uint8_t* status);
 
 /*
 	Sets frequency band and reads chip status.
-	Returns 1 if successful, 0 otherwise.
+	Returns ERROR_NONE if successful.
 */
-int FREQCONFIG_set_band(freq_band fb, uint8_t* status);
+tcvr_error_t FREQCONFIG_set_band(freq_band fb, uint8_t* status);
 
 /*
 	Reads whether out-of-lock detector is enabled, and reads chip status.
-	Returns 1 if successful, 0 otherwise.
+	Returns ERROR_NONE if successful.
 */
-int FREQCONFIG_read_out_of_lock_detector_enabled(int* enabled, uint8_t* status);
+tcvr_error_t FREQCONFIG_read_out_of_lock_detector_enabled(int* enabled, uint8_t* status);
 
 /*
 	Sets whether out-of-lock detector is enabled, and reads chip status.
-	Returns 1 if successful, 0 otherwise.
+	Returns ERROR_NONE if successful.
 */
-int FREQCONFIG_set_out_of_lock_detector_enabled(int enable, uint8_t* status);
+tcvr_error_t FREQCONFIG_set_out_of_lock_detector_enabled(int enable, uint8_t* status);
 
 #endif
