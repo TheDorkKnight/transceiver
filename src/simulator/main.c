@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "../error.h"
 #include "../bits.h"
 #include "../spi.h"
 #include "../bang_registers.h"
@@ -21,20 +22,20 @@
 	that everything is working without having a physical chip.
 */
 int main(int argc, char** argv) {
-	int success;
-	uint8_t byt = 0xc4;
-	uint8_t test = 0;
-	uint8_t status = 0xff;
+	tcvr_error_t err = ERROR_NONE;
+	uint8_t      byt = 0xc4;
+	uint8_t      test = 0;
+	uint8_t      status = 0xff;
 
 	printf("Beginning register test...\n");
 
-	success = REGISTER_write(FS_CFG, byt, &status);
-	if (!success) {
+	err = REGISTER_write(FS_CFG, byt, &status);
+	if (err != ERROR_NONE) {
 		printf("REGISTER_write was not a success\n");
 	}
 
-	success = REGISTER_read(FS_CFG, &test, &status);
-	if (!success) {
+	err = REGISTER_read(FS_CFG, &test, &status);
+	if (err != ERROR_NONE) {
 		printf("REGISTER_read was not a success\n");
 	}
 
